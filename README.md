@@ -50,12 +50,27 @@ The receiver must allow power-on over the network ("Network Standby" or a simila
 ## Requirements
 
 - Windows 10 / 11
-- Python 3.10+ from python.org (tested with 3.13). The installer creates its own virtual
-  environment (`.venv`) in the folder, so nothing is installed into your global Python.
+- For the release zip: nothing else.
+- From source: Python 3.10+ from python.org (tested with 3.13). The installer creates its own
+  virtual environment (`.venv`) in the folder, so nothing is installed into your global Python.
 - A receiver that speaks eISCP (most Onkyo, Pioneer and Integra network models).
   Enable "Network Standby" (or similar) on the receiver so it can be powered on over the network.
 
 ## Install
+
+### Download (no Python needed)
+
+1. Download `eiscp-autopower-<version>-win64.zip` from [Releases](https://github.com/Warionate/eiscp-autopower/releases)
+   and extract it to a folder that is not synchronised by OneDrive or similar.
+   It contains the official embeddable Python from python.org, so nothing else is needed.
+2. Copy `config.example.json` to `config.json` and set `host`.
+3. Right-click `install.ps1` → "Run with PowerShell", or run
+   `powershell -ExecutionPolicy Bypass -File install.ps1` in that folder.
+
+To update, extract the new zip over the old folder (keep your `config.json`) and run `install.ps1` again.
+The `.sha256` file next to each zip lets you verify the download: `Get-FileHash <zip>`.
+
+### From source
 
 ```powershell
 git clone https://github.com/Warionate/eiscp-autopower.git
@@ -92,13 +107,17 @@ not change under the scheduled task.
 ## Manual commands
 
 ```powershell
-.venv\Scripts\python eiscp_autopower.py status   # power, input, volume
-.venv\Scripts\python eiscp_autopower.py wake     # power on if in standby (leaves other inputs alone)
-.venv\Scripts\python eiscp_autopower.py pc       # force: power on + PC input + volume, even if another input is in use
-.venv\Scripts\python eiscp_autopower.py off      # standby if on the PC input
+Use `python\python.exe` (release zip) or `.venv\Scripts\python.exe` (source checkout):
+
+```powershell
+python\python.exe eiscp_autopower.py status   # power, input, volume
+python\python.exe eiscp_autopower.py wake     # power on if in standby (leaves other inputs alone)
+python\python.exe eiscp_autopower.py pc       # force: power on + PC input + volume, even if another input is in use
+python\python.exe eiscp_autopower.py off      # standby if on the PC input
 ```
 
-`pc` makes a handy desktop shortcut: target `"<folder>\.venv\Scripts\pythonw.exe" "<folder>\eiscp_autopower.py" pc`.
+`pc` makes a handy desktop shortcut: target `"<folder>\python\pythonw.exe" "<folder>\eiscp_autopower.py" pc`
+(or `.venv\Scripts\pythonw.exe` for a source checkout).
 
 ## Troubleshooting
 
@@ -157,6 +176,16 @@ Windows PC に合わせて、Onkyo / Pioneer / Integra のネットワーク対�
 登録の前に電源・入力・音量を表示するので、それが出れば使えます。
 
 ### 入れ方
+
+**ダウンロード版（Python 不要）**
+
+1. [Releases](https://github.com/Warionate/eiscp-autopower/releases) から `eiscp-autopower-<版>-win64.zip` をダウンロードし、OneDrive などで同期しないフォルダに展開します。python.org 公式の組み込み用 Python が入っているので、ほかに何も要りません。
+2. `config.example.json` を `config.json` にコピーし、`host` を書きます。
+3. `install.ps1` を右クリック →「PowerShell で実行」（またはそのフォルダで `powershell -ExecutionPolicy Bypass -File install.ps1`）。
+
+更新するときは、新しい zip を同じフォルダに上書きで展開し（`config.json` は残す）、`install.ps1` をもう一度実行します。zip の横の `.sha256` で、ダウンロードしたファイルが壊れていないか確かめられます（`Get-FileHash <zip>`）。
+
+**ソースから**
 
 python.org の Python 3.10 以上を入れておいてください（確認は 3.13）。ライブラリはフォルダの中の仮想環境（`.venv`）に入るので、普段使っている Python には何も入りません。
 
