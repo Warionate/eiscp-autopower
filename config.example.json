@@ -1,0 +1,9 @@
+{
+  "host": "192.168.1.50",
+  "pc_input": "optical",
+  "wake_volume": 25,
+  "wake_on_unlock": true,
+  "wake_on_sound": true,
+  "off_on_sleep": true,
+  "silence_minutes": 10
+}
