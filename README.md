@@ -128,10 +128,17 @@ Look at `eiscp-autopower.log` next to the script.
 - `wake(...): already on, input [...] - leave it` – expected when the receiver is in use on another input.
 - No `sound started` lines – the default playback device may not be the one connected to the
   receiver; the agent measures the default output device.
+- `install.ps1` stops with `the receiver did not answer` – wrong `host`, or the receiver is not
+  reachable. Check with `Test-NetConnection <host> -Port 60128`.
+- "Running scripts is disabled on this system" – run it as `powershell -ExecutionPolicy Bypass -File install.ps1`.
+
+`uninstall.ps1` removes the task and stops the agent; then delete the folder. Nothing is left in
+the registry or Windows settings.
 
 ## License
 
-MIT
+MIT. The release zip bundles Python, which is under the Python Software Foundation License
+(`LICENSE-Python.txt`).
 
 ---
 
@@ -175,6 +182,12 @@ Windows PC に合わせて、Onkyo / Pioneer / Integra のネットワーク対�
 自分の機器で使えるかは、`config.json` にレシーバーのアドレスを書いて `install.ps1` を実行すれば分かります。
 登録の前に電源・入力・音量を表示するので、それが出れば使えます。
 
+### 必要なもの
+
+- Windows 10 / 11
+- ダウンロード版なら、ほかには何も要りません。ソースから入れる場合は python.org の Python 3.10 以上（確認は 3.13）
+- eISCP に対応したレシーバー（上の「対応機器」）。レシーバー側で「ネットワークスタンバイ」（機種によって名前は違います）を有効にしておくこと。無効だとネットワーク越しに電源を入れられません
+
 ### 入れ方
 
 **ダウンロード版（Python 不要）**
@@ -201,7 +214,54 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 
 置き場所は OneDrive などで**同期しないフォルダ**にしてください。同期フォルダに置くと、パスが変わってタスクが動かなくなることがあります。
 
-レシーバー側では「ネットワークスタンバイ」（機種によって名前は違います）を有効にしてください。これが無効だと、ネットワーク越しに電源を入れられません。
+### 設定
 
-設定項目・手動コマンド・困ったときは、上の英語の節と同じです（`config.json` で必須なのは `host` だけ）。
+`config.json`（必須なのは `host` だけ）:
+
+| 項目 | 既定値 | 意味 |
+|---|---|---|
+| `host` | – | レシーバーの IP かホスト名。DHCP の固定割り当てなどで、アドレスが変わらないようにしておくのがおすすめ |
+| `pc_input` | `"optical"` | PC をつないでいる入力。[onkyo-eiscp](https://github.com/miracle2k/onkyo-eiscp) での名前で書く（`optical`・`coaxial`・`pc`・`usb-dac-in` など）。今の入力は `status` で確かめられる |
+| `wake_volume` | `null` | 常駐がレシーバーの電源を入れたときに設定する音量。`null` なら音量は変えない |
+| `wake_on_unlock` | `true` | ログオン・ロック解除・スリープ復帰で電源を入れる |
+| `wake_on_sound` | `true` | 音が出始めたら電源を入れる |
+| `off_on_sleep` | `true` | スリープ・シャットダウンの前にスタンバイにする |
+| `silence_minutes` | `10` | 無音がこの分数続いたらスタンバイにする。`0` で無効 |
+| `audio_threshold` | `1e-5` | 「音が出ている」とみなす出力のピーク値 |
+| `log_file` | `"eiscp-autopower.log"` | スクリプトのフォルダからの相対パス。1 MB × 3 世代で回す |
+
+`config.json` を変えたら `install.ps1` をもう一度実行してください（常駐が起動し直して、新しい設定を読みます）。
+
+### 手で操作する
+
+ダウンロード版は `python\python.exe`、ソースから入れた場合は `.venv\Scripts\python.exe` を使います。
+
+```powershell
+python\python.exe eiscp_autopower.py status   # 電源・入力・音量を表示
+python\python.exe eiscp_autopower.py wake     # スタンバイなら電源を入れる（ほかの入力で使用中なら何もしない）
+python\python.exe eiscp_autopower.py pc       # 強制的に 電源オン＋PC の入力＋音量（ほかの入力で使用中でも切り替える）
+python\python.exe eiscp_autopower.py off      # 入力が PC のときだけスタンバイにする
+```
+
+`pc` はデスクトップのショートカットにしておくと便利です。リンク先は
+`"<フォルダ>\python\pythonw.exe" "<フォルダ>\eiscp_autopower.py" pc`（ソースから入れた場合は `.venv\Scripts\pythonw.exe`）。
+
+### うまく動かないとき
+
+スクリプトと同じフォルダの `eiscp-autopower.log` を見てください。
+
+- `off(sleep): standby sent` … スリープ前にスタンバイを送れている
+- `off(sleep): state unknown` … 直前の 10 分間、レシーバーに届いていなかった。ネットワークやレシーバーの「ネットワークスタンバイ」の設定を確かめる
+- `wake(...): already on, input [...] - leave it` … レシーバーがほかの入力で使われているので、わざと何もしていない
+- `sound started` が出ない … 既定の再生デバイスが、レシーバーにつないでいるものと違う可能性がある。常駐は Windows の「既定の再生デバイス」の音を測っている
+- `install.ps1` が `the receiver did not answer` で止まる … `config.json` の `host` が違うか、レシーバーに届いていない。PC から `Test-NetConnection <host> -Port 60128` で届くか確かめる
+- PowerShell が「スクリプトの実行が無効」と言う … `powershell -ExecutionPolicy Bypass -File install.ps1` の形で実行する
+
+### 外す
+
+`uninstall.ps1` を実行するとタスクを外して常駐を止めます。そのあとフォルダを消せば、全部消えます（Windows の設定やレジストリには何も残しません）。
+
+### ライセンス
+
+MIT。ダウンロード版に同梱している Python は Python Software Foundation License です（`LICENSE-Python.txt`）。
 
